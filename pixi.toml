@@ -1,0 +1,12 @@
+[workspace]
+name = "nrt-storyline-forcing"
+channels = ["conda-forge", "bioconda"]
+platforms = ["linux-64"]
+
+[dependencies]
+python = "3.12.*"
+snakemake = "9.26.*"
+snakemake-executor-plugin-slurm = "2.8.*"
+cdo = { version = "==2.0.3", build = "he19d259_1" }
+eccodes = "==2.26.0"
+cdsapi = "*"

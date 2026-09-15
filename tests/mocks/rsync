@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Mock rsync: copy the sources into the last argument with any `host:` prefix removed.
+[ -z "${MOCK_RSYNC_RC:-}" ] || exit "${MOCK_RSYNC_RC}"
+dest=${!#}
+for arg in "${@:1:$#-1}"; do
+    case ${arg} in
+    -*) ;;
+    *) cp "${arg}" "${dest#*:}" || exit 1 ;;
+    esac
+done

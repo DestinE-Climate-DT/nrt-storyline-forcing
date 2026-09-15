@@ -1,0 +1,7 @@
+.pixi/
+.pixi.broken-*/
+inproot/
+logs/
+nrt_forcing.conf
+pixi.lock
+producer/.snakemake/

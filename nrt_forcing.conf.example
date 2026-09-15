@@ -1,0 +1,9 @@
+# Per-clone settings. nrt_forcing_setup.sh writes nrt_forcing.conf from this file and never overwrites it.
+NRT_SITE=
+NRT_SLURM_ACCOUNT=
+
+# ssh alias of the machine that holds --dest-dir; empty when it is this machine.
+NRT_DEST_HOST=
+
+# Optional: directory for CDO intermediates, e.g. scratch for a long tco1279 backfill.
+#NRT_TMPDIR=

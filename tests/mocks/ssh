@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Mock ssh: drop `-o VALUE` options and the host, run the command here.
+while [ "$1" = -o ]; do
+    shift 2
+done
+shift
+exec "$@"

@@ -1,0 +1,24 @@
+name: ci
+on: [push, pull_request]
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y bats shellcheck shfmt
+      - run: shellcheck -S error nrt_forcing.sh nrt_forcing_setup.sh sites/*.conf tests/mocks/*
+      - run: shfmt -i 4 -d nrt_forcing.sh nrt_forcing_setup.sh tests/mocks
+      - run: bats tests
+
+  secrets:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: >-
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.18.4
+          detect --source /repo --no-banner --redact -v

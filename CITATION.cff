@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: If you use this software, please cite it using these metadata.
+type: software
+title: nrt-storyline-forcing
+abstract: Near-real-time ERA5 nudging forcing for IFS-FESOM storyline runs; produce, verify, ship.
+license: Apache-2.0
+repository-code: https://github.com/MuhammadShafeeque/nrt-storyline-forcing
+authors:
+  - given-names: Sebastian
+    family-names: Beyer
+    affiliation: Alfred Wegener Institute, Helmholtz Centre for Polar and Marine Research
+    orcid: https://orcid.org/0000-0002-3731-0278
+  - given-names: Muhammad
+    family-names: Shafeeque
+    affiliation: Alfred Wegener Institute, Helmholtz Centre for Polar and Marine Research
+    orcid: https://orcid.org/0000-0002-2152-6672
+  - given-names: Paul
+    family-names: Gierz
+    affiliation: Alfred Wegener Institute, Helmholtz Centre for Polar and Marine Research
+    orcid: https://orcid.org/0000-0002-4512-087X
+  - given-names: Miguel
+    family-names: Andrés-Martínez
+    affiliation: Alfred Wegener Institute, Helmholtz Centre for Polar and Marine Research
+    orcid: https://orcid.org/0000-0002-1525-5546

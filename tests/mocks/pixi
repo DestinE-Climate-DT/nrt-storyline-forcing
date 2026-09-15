@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Mock pixi: an env is runnable when <root>/.pixi exists without a `broken` marker.
+case $1 in
+shell-hook) exit 0 ;;
+install) mkdir -p "$(dirname "$3")/.pixi" ;;
+run) [ -d "$(dirname "$3")/.pixi" ] && [ ! -e "$(dirname "$3")/.pixi/broken" ] ;;
+esac

@@ -1,0 +1,6 @@
+nrt-storyline-forcing
+Copyright 2026 the nrt-storyline-forcing authors
+
+The forcing rule in producer/workflow/rules/preprocess_inputs_local.smk was written by
+Sebastian Beyer, building on an initial version by Paul Gierz (Alfred Wegener Institute),
+and is published here under the Apache License 2.0 with their agreement.

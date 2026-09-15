@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Mock snakemake: targets are what follows `--jobs N`; a real run writes the missing ones at one size.
+[ -z "${MOCK_SNAKEMAKE_RC:-}" ] || exit "${MOCK_SNAKEMAKE_RC}"
+while [ $# -gt 0 ] && [ "$1" != --jobs ]; do
+    shift
+done
+shift 2
+dry=0
+missing=()
+for arg in "$@"; do
+    case ${arg} in
+    --dry-run) dry=1 ;;
+    /*) [ -f "${arg}" ] || missing+=("${arg}") ;;
+    *)
+        echo "not a target: ${arg}" >&2
+        exit 1
+        ;;
+    esac
+done
+if [ ${#missing[@]} -eq 0 ]; then
+    echo "Nothing to be done."
+elif [ "${dry}" = 1 ]; then
+    echo "create_nudging_file ${#missing[@]}"
+else
+    for target in "${missing[@]}"; do
+        mkdir -p "$(dirname "${target}")" && printf '%08d' 0 >"${target}"
+    done
+fi

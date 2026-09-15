@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Mock grib_get: dataTime is the hour in the record name, or 0 for the record named by MOCK_BAD_DATATIME.
+file=${!#}
+if [ "$(basename "${file}")" = "${MOCK_BAD_DATATIME:-}" ]; then
+    echo 0
+else
+    echo "$((10#${file: -4:2}00))"
+fi
