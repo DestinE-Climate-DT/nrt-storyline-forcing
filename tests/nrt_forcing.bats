@@ -43,6 +43,11 @@ records() {
     [ "${status}" -eq 1 ]
 }
 
+@test "pixi hook that does not evaluate: 3" {
+    MOCK_BAD_HOOK=1 run "${ROOT}/nrt_forcing.sh" --plan --dest-dir "${DEST}" 20170101 20170101
+    [ "${status}" -eq 3 ]
+}
+
 @test "idle plan: 10 and no run log left" {
     records 20170101
     run "${ROOT}/nrt_forcing.sh" --plan --dest-dir "${DEST}" 20170101 20170101

@@ -10,7 +10,7 @@
 #   4   Snakemake refused the request or failed
 #   5   a day failed verification
 #   6   a verified day did not reach the destination intact
-#   10  nothing to do, or a run is already in progress
+#   10  --plan found nothing to do, or a run is already in progress
 
 set -uo pipefail
 
@@ -189,12 +189,11 @@ if ! cd "${ROOT}/producer" 2>/dev/null || [ ! -f workflow/Snakefile ]; then
     echo "ERROR: no producer in ${ROOT}/producer" >&2
     exit 3
 fi
-if ! hook=$(pixi shell-hook --manifest-path "${ROOT}/pixi.toml" 2>&1); then
-    printf '%s\n' "${hook}" >&2
+# stderr stays out of the hook: pixi warns there (e.g. a cache on Lustre), and eval would choke on it.
+if ! hook=$(pixi shell-hook --manifest-path "${ROOT}/pixi.toml") || ! eval "${hook}"; then
     echo "ERROR: pixi env not usable; run nrt_forcing_setup.sh" >&2
     exit 3
 fi
-eval "${hook}"
 
 TARGETS=()
 DAYS=()

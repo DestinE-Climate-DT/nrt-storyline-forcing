@@ -41,7 +41,10 @@ nrt_forcing.sh --dest-dir DIR [--plan] [--no-sync] [--expid ID] [--config FILE] 
 | 4 | Snakemake refused the request or failed |
 | 5 | a day failed verification |
 | 6 | a verified day did not reach the destination intact |
-| 10 | nothing to do, or a run is already in progress |
+| 10 | `--plan` found nothing to do, or a run is already in progress |
+
+Without `--plan`, days that already exist are verified and shipped again, which repairs a damaged
+destination.
 
 A day passes verification when its four records exist with one non-zero size and each record's
 `dataTime` is its own hour. Days are verified and shipped one at a time, so a gap does not hold
