@@ -10,7 +10,7 @@ days to the directory a running experiment reads, and checks them again on arriv
 ## Quick start
 
 ```bash
-git clone https://github.com/MuhammadShafeeque/nrt-storyline-forcing.git
+git clone https://github.com/DestinE-Climate-DT/nrt-storyline-forcing.git
 cd nrt-storyline-forcing
 ./nrt_forcing_setup.sh --site levante --account <slurm-account>
 

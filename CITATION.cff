@@ -4,7 +4,7 @@ type: software
 title: nrt-storyline-forcing
 abstract: Near-real-time ERA5 nudging forcing for IFS-FESOM storyline runs; produce, verify, ship.
 license: Apache-2.0
-repository-code: https://github.com/MuhammadShafeeque/nrt-storyline-forcing
+repository-code: https://github.com/DestinE-Climate-DT/nrt-storyline-forcing
 authors:
   - given-names: Sebastian
     family-names: Beyer
