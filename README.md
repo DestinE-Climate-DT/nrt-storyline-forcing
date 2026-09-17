@@ -53,6 +53,9 @@ A day passes verification when its four records exist with one non-zero size and
 `dataTime` is its own hour. Days are verified and shipped one at a time, so a gap does not hold
 back the days around it.
 
+Records land as `644`, whatever mode the producer's own umask or ACL gave them: readable by the
+account that runs the experiment and by anyone else on that machine, writable only by the owner.
+
 ## Configuration
 
 | File | Holds |
