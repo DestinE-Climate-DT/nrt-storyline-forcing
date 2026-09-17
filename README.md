@@ -7,6 +7,21 @@ A Snakemake rule turns ERA5 model-level vorticity and divergence into the four d
 with one stable command: it produces the requested days, verifies each one, copies the verified
 days to the directory a running experiment reads, and checks them again on arrival.
 
+## Status
+
+`v0.1.0-alpha.1`, the first tagged release. The interface may still change before `v0.1.0`.
+
+Planned before `v0.1.0`:
+
+- Sites beyond Levante, and a first run of the CDS route (`era5_source: cds`), which is upstream
+  code this repo has not yet exercised.
+- Verification of the field values, not only each day's record set and each record's `dataTime`.
+- Rotation for the per-run logs and `events.jsonl`, which grow without bound.
+
+`pixi.lock` stays untracked by design: every clone solves its own environment, and `pixi.toml`
+pins the CDO and ecCodes builds the output bytes depend on. Whichever solve a clone gets, a site
+is accepted only once a known day is proven byte-identical to a reference.
+
 ## Quick start
 
 ```bash
