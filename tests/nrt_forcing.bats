@@ -15,9 +15,10 @@ setup() {
 }
 
 records() {
-    mkdir -p "${OUT}"
+    local dir=${2:-${OUT}}
+    mkdir -p "${dir}"
     for hh in 00 06 12 18; do
-        printf '%08d' 0 >"${OUT}/rlxmlsh$1${hh}00"
+        printf '%08d' 0 >"${dir}/rlxmlsh$1${hh}00"
     done
 }
 
@@ -62,6 +63,7 @@ records() {
 
 @test "idle plan: 10 and no run log left" {
     records 20170101
+    records 20170101 "${DEST}"
     run "${ROOT}/nrt_forcing.sh" --plan --dest-dir "${DEST}" 20170101 20170101
     [ "${status}" -eq 10 ]
     [ -z "$(find "${LOGS}" -name '*.log')" ]
@@ -72,6 +74,33 @@ records() {
     run "${ROOT}/nrt_forcing.sh" --plan --dest-dir "${DEST}" 20170101 20170101
     [ "${status}" -eq 0 ]
     [ ! -e "${OUT}/rlxmlsh201701010000" ]
+}
+
+@test "produced but never shipped, plan: 0, and the run ships it" {
+    records 20170101
+    records 20170102
+    records 20170101 "${DEST}"
+    run "${ROOT}/nrt_forcing.sh" --plan --dest-dir "${DEST}" 20170101 20170102
+    [ "${status}" -eq 0 ]
+    [[ ${output} == *"not at the destination: 20170102"* ]]
+    run "${ROOT}/nrt_forcing.sh" --dest-dir "${DEST}" 20170101 20170102
+    [ "${status}" -eq 0 ]
+    run "${ROOT}/nrt_forcing.sh" --plan --dest-dir "${DEST}" 20170101 20170102
+    [ "${status}" -eq 10 ]
+}
+
+@test "produced, destination unreachable, plan: 0" {
+    echo NRT_DEST_HOST=dest-host >>"${ROOT}/nrt_forcing.conf"
+    records 20170101
+    MOCK_SSH_RC=255 run "${ROOT}/nrt_forcing.sh" --plan --dest-dir "${DEST}" 20170101 20170101
+    [ "${status}" -eq 0 ]
+    grep -q '"event":"dest_unreachable"' "${LOGS}/events.jsonl"
+}
+
+@test "produced, --no-sync plan: 10 without asking the destination" {
+    records 20170101
+    run "${ROOT}/nrt_forcing.sh" --plan --no-sync --dest-dir "${DEST}" 20170101 20170101
+    [ "${status}" -eq 10 ]
 }
 
 @test "missing day produced with NRT_TMPDIR set: targets still follow --jobs" {

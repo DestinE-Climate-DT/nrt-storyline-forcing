@@ -33,18 +33,19 @@ nrt_forcing.sh --dest-dir DIR [--dest-host HOST] [--plan] [--no-sync] [--expid I
 - `--dest-host` is an alias in **this** machine's ssh config, not the reader's. An absolute `DIR`
   whose root is missing here and no dest host is refused up front, rather than becoming a local
   directory nothing is ever shipped to.
-- `--plan` asks Snakemake what is missing and changes nothing.
+- `--plan` asks Snakemake what is missing, and the destination which built days it lacks, and
+  changes nothing.
 - `--expid` labels logs and metrics only.
 
 | Exit | Meaning |
 | --- | --- |
-| 0 | produced, and shipped unless `--no-sync` |
+| 0 | produced, and shipped unless `--no-sync`; with `--plan`, days to produce or to ship |
 | 1 | bad arguments: a `DIR` not ending in `tco<N>l137`, or a remote `DIR` with no dest host |
 | 3 | config, site file or producer missing |
 | 4 | Snakemake refused the request or failed |
 | 5 | a day failed verification |
 | 6 | a verified day did not reach the destination intact |
-| 10 | `--plan` found nothing to do, or a run is already in progress |
+| 10 | `--plan` found every day produced and at the destination, or a run is already in progress |
 
 Without `--plan`, days that already exist are verified and shipped again, which repairs a damaged
 destination.
@@ -84,7 +85,8 @@ logs/<grid>/           run logs, events.jsonl, nrt_forcing.prom (untracked)
 Each grid gets its own log directory:
 
 - `<first>_<last>_<runid>.log`: the whole run, for a human. An idle `--plan` leaves none.
-- `events.jsonl`: one flat JSON object per event (`start`, `nothing_to_do`, `already_running`,
+- `events.jsonl`: one flat JSON object per event (`start`, `nothing_to_do`, `unshipped`,
+  `dest_unreachable`, `already_running`,
   `plan_refused`, `produced`, `produce_failed`, `verified`, `verify_failed`, `shipped`,
   `ship_failed`, `landed`, `land_failed`, `end`), each carrying `run_id`, `expid`, `grid`, days,
   user and host.

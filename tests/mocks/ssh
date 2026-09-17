@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Mock ssh: drop `-o VALUE` options and the host, run the command here.
+[ -z "${MOCK_SSH_RC:-}" ] || exit "${MOCK_SSH_RC}"
 while [ "$1" = -o ]; do
     shift 2
 done

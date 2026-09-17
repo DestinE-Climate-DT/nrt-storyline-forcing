@@ -5,14 +5,14 @@
 #                  [--config FILE] <FIRST_DAY> <LAST_DAY>
 #
 # Exit codes:
-#   0   produced, and shipped unless --no-sync
+#   0   produced, and shipped unless --no-sync; with --plan, days to produce or to ship
 #   1   bad arguments, including a DIR that does not end in tco<N>l137, or an
 #       absolute DIR whose root is not on this machine and no dest host
 #   3   config, site file or producer missing
 #   4   Snakemake refused the request or failed
 #   5   a day failed verification
 #   6   a verified day did not reach the destination intact
-#   10  --plan found nothing to do, or a run is already in progress
+#   10  --plan found every day produced and at the destination, or a run is already in progress
 
 set -uo pipefail
 
@@ -253,6 +253,29 @@ echo "   out        ${OUTDIR}"
 echo "   dest       ${DEST_HOST:+${DEST_HOST}:}${DEST_DIR}"
 echo "=============================================================="
 
+# Four records sharing one non-zero size: the rule the release probe applies.
+day_complete() {
+    local sizes
+    sizes=$(stat -c %s "$1/rlxmlsh$2"{00,06,12,18}00 2>/dev/null) || return 1
+    [[ $(sort -u <<<"${sizes}") =~ ^[1-9][0-9]*$ ]]
+}
+
+# Runs stdin as a bash script on the destination machine.
+on_dest() {
+    if [ -n "${DEST_HOST}" ]; then
+        ssh -o BatchMode=yes -o ConnectTimeout=30 "${DEST_HOST}" bash -s
+    else
+        bash -s
+    fi
+}
+
+# Prints the given days the destination holds intact; fails only when it cannot be reached.
+landed_days() {
+    on_dest <<<"$(declare -f day_complete)
+for d in $*; do day_complete '${DEST_DIR}' \$d && echo \$d; done
+exit 0"
+}
+
 if [ -n "$(ls -A .snakemake/locks 2>/dev/null)" ]; then
     log_event already_running
     exit 10
@@ -266,7 +289,23 @@ fi
 case ${plan} in
 *"Nothing to be done"*)
     log_event nothing_to_do
-    [ "${PLAN_ONLY}" = 1 ] && exit 10
+    if [ "${PLAN_ONLY}" = 1 ]; then
+        [ "${SYNC}" = 1 ] || exit 10
+        # Produced is not shipped: a day whose transfer failed leaves Snakemake nothing to do.
+        if ! landed=$(landed_days "${DAYS[@]}"); then
+            log_event dest_unreachable
+            echo "cannot check ${DEST_HOST:+${DEST_HOST}:}${DEST_DIR}; shipping again"
+            exit 0
+        fi
+        unshipped=()
+        for day in "${DAYS[@]}"; do
+            grep -qx "${day}" <<<"${landed}" || unshipped+=("${day}")
+        done
+        [ ${#unshipped[@]} -eq 0 ] && exit 10
+        log_event unshipped days "\"${unshipped[*]}\""
+        echo "produced but not at the destination: ${unshipped[*]}"
+        exit 0
+    fi
     ;;
 *)
     printf '%s\n' "${plan}" | tail -15
@@ -280,13 +319,6 @@ case ${plan} in
     log_event produced days "${DAYS_PRODUCED}"
     ;;
 esac
-
-# Four records sharing one non-zero size: the rule the release probe applies.
-day_complete() {
-    local sizes
-    sizes=$(stat -c %s "$1/rlxmlsh$2"{00,06,12,18}00 2>/dev/null) || return 1
-    [[ $(sort -u <<<"${sizes}") =~ ^[1-9][0-9]*$ ]]
-}
 
 # The probe's rule, plus each record holding its own hour: a copy of 00 UTC passes the size rule.
 verify_day() {
@@ -303,15 +335,6 @@ verify_day() {
     done
     RECORD_BYTES=$(stat -c %s "${OUTDIR}/rlxmlsh${day}0000")
     echo "  ${day}: 4 records, ${RECORD_BYTES} B each"
-}
-
-# Runs stdin as a bash script on the destination machine.
-on_dest() {
-    if [ -n "${DEST_HOST}" ]; then
-        ssh -o BatchMode=yes "${DEST_HOST}" bash -s
-    else
-        bash -s
-    fi
 }
 
 echo "verifying:"
@@ -363,8 +386,7 @@ if [ "${DAYS_SHIPPED}" -eq 0 ]; then
 fi
 
 # rsync exiting 0 means bytes were sent, not that the probe will accept the day.
-landed=$(on_dest <<<"$(declare -f day_complete)
-for d in ${shipped[*]}; do day_complete '${DEST_DIR}' \$d && echo \$d; done")
+landed=$(landed_days "${shipped[@]}")
 for day in "${shipped[@]}"; do
     if grep -qx "${day}" <<<"${landed}"; then
         DAYS_LANDED=$((DAYS_LANDED + 1))
