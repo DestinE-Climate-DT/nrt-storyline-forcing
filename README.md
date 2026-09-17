@@ -25,18 +25,21 @@ never overwrites an existing `nrt_forcing.conf`.
 ## Interface
 
 ```text
-nrt_forcing.sh --dest-dir DIR [--plan] [--no-sync] [--expid ID] [--config FILE] <FIRST_DAY> <LAST_DAY>
+nrt_forcing.sh --dest-dir DIR [--dest-host HOST] [--plan] [--no-sync] [--expid ID] [--config FILE] <FIRST_DAY> <LAST_DAY>
 ```
 
 - `DIR` is the directory the experiment reads; its last component (`tco<N>l137`) sets the grid.
-  It is on `NRT_DEST_HOST` when that is set, otherwise on this machine.
+  It is on `--dest-host`, else `NRT_DEST_HOST`, else this machine.
+- `--dest-host` is an alias in **this** machine's ssh config, not the reader's. An absolute `DIR`
+  whose root is missing here and no dest host is refused up front, rather than becoming a local
+  directory nothing is ever shipped to.
 - `--plan` asks Snakemake what is missing and changes nothing.
 - `--expid` labels logs and metrics only.
 
 | Exit | Meaning |
 | --- | --- |
 | 0 | produced, and shipped unless `--no-sync` |
-| 1 | bad arguments, including a `DIR` that does not end in `tco<N>l137` |
+| 1 | bad arguments: a `DIR` not ending in `tco<N>l137`, or a remote `DIR` with no dest host |
 | 3 | config, site file or producer missing |
 | 4 | Snakemake refused the request or failed |
 | 5 | a day failed verification |

@@ -43,6 +43,18 @@ records() {
     [ "${status}" -eq 1 ]
 }
 
+@test "absolute dest dir whose root is not here, and no dest host: 1" {
+    run "${ROOT}/nrt_forcing.sh" --dest-dir /no-such-root/x/tco79l137 20170101 20170101
+    [ "${status}" -eq 1 ]
+    [[ ${output} == *"no dest host"* ]]
+}
+
+@test "a dest host makes a dest dir that is not local legitimate" {
+    run "${ROOT}/nrt_forcing.sh" --dest-host far-away \
+        --dest-dir /no-such-root/x/tco79l137 20170101 20170101
+    ! [[ ${output} == *"no dest host"* ]]
+}
+
 @test "pixi hook that does not evaluate: 3" {
     MOCK_BAD_HOOK=1 run "${ROOT}/nrt_forcing.sh" --plan --dest-dir "${DEST}" 20170101 20170101
     [ "${status}" -eq 3 ]

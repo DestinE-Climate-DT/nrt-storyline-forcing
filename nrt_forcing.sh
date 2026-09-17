@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # Produce storyline nudging forcing, verify each day, and ship it to the directory the release probes.
 #
-#   nrt_forcing.sh --dest-dir DIR [--plan] [--no-sync] [--expid ID] [--config FILE] <FIRST_DAY> <LAST_DAY>
+#   nrt_forcing.sh --dest-dir DIR [--dest-host HOST] [--plan] [--no-sync] [--expid ID]
+#                  [--config FILE] <FIRST_DAY> <LAST_DAY>
 #
 # Exit codes:
 #   0   produced, and shipped unless --no-sync
-#   1   bad arguments, including a DIR that does not end in tco<N>l137
+#   1   bad arguments, including a DIR that does not end in tco<N>l137, or an
+#       absolute DIR whose root is not on this machine and no dest host
 #   3   config, site file or producer missing
 #   4   Snakemake refused the request or failed
 #   5   a day failed verification
@@ -15,13 +17,14 @@
 set -uo pipefail
 
 usage() {
-    echo "usage: nrt_forcing.sh --dest-dir DIR [--plan] [--no-sync] [--expid ID]" \
-        "[--config FILE] <FIRST_DAY> <LAST_DAY>" >&2
+    echo "usage: nrt_forcing.sh --dest-dir DIR [--dest-host HOST] [--plan]" \
+        "[--no-sync] [--expid ID] [--config FILE] <FIRST_DAY> <LAST_DAY>" >&2
     exit 1
 }
 
 CONF=${NRT_FORCING_CONF:-}
 DEST_DIR=""
+DEST_HOST_ARG=""
 PLAN_ONLY=0
 SYNC=1
 EXPID=${NRT_EXPID:-}
@@ -29,6 +32,10 @@ while [ $# -gt 0 ]; do
     case $1 in
     --dest-dir)
         DEST_DIR=${2:-}
+        shift 2 || usage
+        ;;
+    --dest-host)
+        DEST_HOST_ARG=${2:-}
         shift 2 || usage
         ;;
     --config)
@@ -92,7 +99,21 @@ fi
 # shellcheck source=/dev/null
 . "${SITE_FILE}" || exit 3
 
-DEST_HOST=${NRT_DEST_HOST:-}
+DEST_HOST=${DEST_HOST_ARG:-${NRT_DEST_HOST:-}}
+
+# No dest host means "ship to this machine". If an absolute --dest-dir's root
+# is not here, that silently becomes a local mkdir of someone else's path and
+# nothing is ever shipped, so refuse before spending the produce.
+if [ -z "${DEST_HOST}" ] && [ "${DEST_DIR#/}" != "${DEST_DIR}" ]; then
+    dest_root=${DEST_DIR#/}
+    dest_root=/${dest_root%%/*}
+    if [ ! -d "${dest_root}" ]; then
+        echo "ERROR: no dest host, and ${dest_root} is not on this machine;" \
+            "pass --dest-host or set NRT_DEST_HOST in ${CONF}" >&2
+        exit 1
+    fi
+fi
+
 JOBS=${NRT_SNAKEMAKE_JOBS:-10}
 TMPDIR_OVERRIDE=${NRT_TMPDIR:-}
 OUTDIR=${ROOT}/inproot/storyline_forcing/${GRID}
