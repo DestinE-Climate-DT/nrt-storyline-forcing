@@ -1,0 +1,6 @@
+# ERA5 is not on LUMI; the four nudging hours are fetched from CDS, under the
+# 6H level because they are not the 1H pool product. The cache path is a
+# per-clone setting (NRT_ERA5_DIR), not a property of the machine.
+era5_source: cds
+era5_freq: 6H
+era5_keep: true

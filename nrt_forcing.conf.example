@@ -7,3 +7,9 @@ NRT_DEST_HOST=
 
 # Optional: directory for CDO intermediates, e.g. scratch for a long tco1279 backfill.
 #NRT_TMPDIR=
+
+# Optional: override the site's ERA5 source, e.g. a cache of your own.
+#NRT_ERA5_DIR=
+#NRT_ERA5_SOURCE=
+#NRT_ERA5_FREQ=
+#NRT_ERA5_KEEP=

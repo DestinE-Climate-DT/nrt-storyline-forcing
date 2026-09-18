@@ -13,8 +13,6 @@ days to the directory a running experiment reads, and checks them again on arriv
 
 Planned before `v0.1.0`:
 
-- Sites beyond Levante, and a first run of the CDS route (`era5_source: cds`), which is upstream
-  code this repo has not yet exercised.
 - Verification of the field values, not only each day's record set and each record's `dataTime`.
 - Rotation for the per-run logs and `events.jsonl`, which grow without bound.
 
@@ -27,15 +25,21 @@ is accepted only once a known day is proven byte-identical to a reference.
 ```bash
 git clone https://github.com/DestinE-Climate-DT/nrt-storyline-forcing.git
 cd nrt-storyline-forcing
-./nrt_forcing_setup.sh --site levante --account <slurm-account>
+./nrt_forcing_setup.sh --site <site> --account <slurm-account>
 
 # One day, produced and kept here:
 ./nrt_forcing.sh --no-sync --dest-dir /any/path/tco79l137 20170101 20170101
 ```
 
 Setup creates `inproot/` and `logs/`, solves the pixi environment (Snakemake, CDO 2.0.3,
-ecCodes) and writes `nrt_forcing.conf` from `nrt_forcing.conf.example`. It is safe to re-run and
-never overwrites an existing `nrt_forcing.conf`.
+ecCodes), writes `nrt_forcing.conf` from `nrt_forcing.conf.example` and then runs
+`nrt_forcing_check.sh`. It is safe to re-run and never overwrites an existing `nrt_forcing.conf`.
+
+`nrt_forcing_check.sh` also stands alone. It answers "can this machine run the producer" before a
+real day depends on the answer: the pixi environment actually runs, the tools the driver shells
+out to exist, the clone is not somewhere with a file quota a pixi environment will exhaust, the
+SLURM **association** exists (a POSIX group is not one), the ERA5 source answers, `NRT_TMPDIR` is
+writable, and the destination host accepts a `BatchMode` connection.
 
 ## Interface
 
@@ -72,19 +76,49 @@ back the days around it.
 Records land as `644`, whatever mode the producer's own umask or ACL gave them: readable by the
 account that runs the experiment and by anyone else on that machine, writable only by the owner.
 
+## Sites
+
+| Site | ERA5 | Scheduler | Notes |
+| --- | --- | --- | --- |
+| `levante` | the local pool, `/pool/data/ERA5` (`1H`) | `compute` | final `E5/` and preliminary `ET/` trees, picked per day by what exists |
+| `lumi` | CDS (`era5_source: cds`, `6H`) | `small` | needs `~/.cdsapirc`; downloads only the four nudging hours and keeps them, in the clone unless `NRT_ERA5_DIR` says otherwise |
+
+A new machine needs three things: a `sites/<name>.conf`, a `producer/config/config-<name>.yaml`
+naming its ERA5 source, and a proof that a known day is byte-identical to a reference. Then
+`nrt_forcing_check.sh` has to pass on it.
+
+### The CDS route
+
+Where ERA5 is not on the machine, set `era5_source: cds`. The cache defaults to `era5-cache/`
+inside the clone; set `NRT_ERA5_DIR` in `nrt_forcing.conf` to put it somewhere shared, the same
+way `NRT_SLURM_ACCOUNT` is a per-clone setting rather than a tracked one. You need a CDS Personal
+Access Token in `~/.cdsapirc`:
+
+```
+url: https://cds.climate.copernicus.eu/api
+key: <token>
+```
+
+and the licence accepted **on the `reanalysis-era5-complete` dataset page**, which is a separate
+acceptance from the general CDS terms. Without it every request returns `403 required licences not
+accepted`, which is indistinguishable by status code from a bad token.
+
+Only the four nudging hours are fetched, so a day costs ~902 MB rather than ~5.41 GB. Because
+those files are not the hourly pool product, they are written at the **`6H`** level of the same
+layout (`<dir_era5>/E5/ml/an/6H/<param>/E5ml00_6H_<date>_<param>.grb`) and a `cds` source
+configured with `era5_freq: 1H` is refused rather than allowed to mislabel them.
+
 ## Configuration
 
 | File | Holds |
 | --- | --- |
-| `nrt_forcing.conf` | per clone: `NRT_SITE`, `NRT_SLURM_ACCOUNT`, `NRT_DEST_HOST`, optional `NRT_TMPDIR` |
-| `sites/<name>.conf` | per machine: pixi location, SLURM partition, Snakemake profile, producer config |
-| `producer/config/config-<site>.yaml` | where ERA5 is on that machine |
+| `nrt_forcing.conf` | per clone: `NRT_SITE`, `NRT_SLURM_ACCOUNT`, `NRT_DEST_HOST`, optional `NRT_TMPDIR` and `NRT_ERA5_*` |
+| `sites/<name>.conf` | per machine: pixi location, SLURM partition, Snakemake profile, producer config, tmpdir |
+| `producer/config/config-<site>.yaml` | where ERA5 is on that machine: `dir_era5`, `era5_source`, `era5_freq`, `era5_keep` |
 
-Optional environment overrides: `NRT_SNAKEMAKE_JOBS` (default 10) and `NRT_CDO` (a CDO binary
-other than the environment's).
-
-A new machine needs a `sites/<name>.conf`, a producer config naming its ERA5 directory (or
-`era5_source: cds` with a CDS key), and a proof that a known day is byte-identical to a reference.
+Optional environment overrides: `NRT_SNAKEMAKE_JOBS` (default 10), `NRT_CDO` (a CDO binary other
+than the environment's), and `NRT_ERA5_DIR` / `NRT_ERA5_SOURCE` / `NRT_ERA5_FREQ` /
+`NRT_ERA5_KEEP`, which override the site's producer config without editing a tracked file.
 
 ## Layout
 
@@ -93,6 +127,8 @@ producer/              the Snakemake rule and its configs
 sites/                 one file per machine
 inproot/storyline_forcing/<grid>/rlxmlsh<YYYYMMDDHH>00    produced records (untracked)
 logs/<grid>/           run logs, events.jsonl, nrt_forcing.prom (untracked)
+tmp/                   CDO intermediates, when the site points NRT_TMPDIR here (untracked)
+era5-cache/            downloaded ERA5, for a cds site with no NRT_ERA5_DIR (untracked)
 ```
 
 ## Observability
@@ -112,8 +148,8 @@ Each grid gets its own log directory:
 ## Tests
 
 ```bash
-shellcheck -S error nrt_forcing.sh nrt_forcing_setup.sh sites/*.conf tests/mocks/*
-shfmt -i 4 -d nrt_forcing.sh nrt_forcing_setup.sh tests/mocks
+shellcheck -S error nrt_forcing.sh nrt_forcing_setup.sh nrt_forcing_check.sh sites/*.conf tests/mocks/*
+shfmt -i 4 -d nrt_forcing.sh nrt_forcing_setup.sh nrt_forcing_check.sh tests/mocks
 bats tests
 ```
 

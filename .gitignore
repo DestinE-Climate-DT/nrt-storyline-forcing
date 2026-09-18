@@ -5,3 +5,5 @@ logs/
 nrt_forcing.conf
 pixi.lock
 producer/.snakemake/
+/tmp/
+/era5-cache/

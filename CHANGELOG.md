@@ -29,9 +29,26 @@ cloned on any machine and pointed at a running experiment.
   a pinned environment (CDO 2.0.3, ecCodes 2.26.0, Snakemake 9.26) and a Levante site file.
 - CI on every push: shellcheck, shfmt, and bats against mocked `pixi`, `snakemake`, `grib_get`,
   `ssh` and `rsync`, plus a gitleaks scan of the full history.
+- **Two sites, `levante` and `lumi`**, and with the second one the CDS route. ERA5 model-level
+  138/155 is not on LUMI and is not covered by DestinE data access, so `era5_source: cds` fetches
+  it; the credential is a CDS Personal Access Token in `~/.cdsapirc`, whose dataset licence is
+  accepted separately from the general CDS terms. Only the four nudging hours are fetched, so a
+  day costs ~902 MB rather than ~5.41 GB, and because those files are not the hourly pool product
+  they are written at the `6H` level of the same layout — a `cds` source left at `1H` is refused
+  rather than allowed to mislabel them.
+- `nrt_forcing_check.sh`: whether this machine can run the producer, asked before a real day
+  depends on the answer. The environment runs, the tools exist, the clone is not where a file
+  quota will exhaust a pixi environment, the SLURM **association** exists rather than just a POSIX
+  group, the ERA5 source answers, `NRT_TMPDIR` is writable, the destination accepts a connection.
+  `nrt_forcing_setup.sh` runs it at the end, and every `sites/*.conf` is tested for the contract.
+- `NRT_ERA5_DIR`, `NRT_ERA5_SOURCE`, `NRT_ERA5_FREQ` and `NRT_ERA5_KEEP` override a site's
+  producer config through Snakemake `--config`, so a second user on a machine edits no tracked
+  file; `era5_keep` lets a downloaded day stay in a cache, written by rename so a half-written
+  file is never offered to another user's Snakemake. No site's cache path or allocation is
+  tracked: like `NRT_SLURM_ACCOUNT`, it belongs to the clone.
 
 ### Not yet in this release
 
-Further sites and the CDS route, verification of field values rather than record shape and
-`dataTime`, and rotation of the per-run logs and `events.jsonl` are all planned before `v0.1.0`.
-`pixi.lock` stays untracked by design; see the Status section of `README.md`.
+Verification of field values rather than record shape and `dataTime`, and rotation of the per-run
+logs and `events.jsonl`, are planned before `v0.1.0`. `pixi.lock` stays untracked by design; see
+the Status section of `README.md`.

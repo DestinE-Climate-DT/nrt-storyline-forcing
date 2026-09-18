@@ -229,6 +229,10 @@ SNAKEMAKE=(snakemake
     --profile "${NRT_SNAKEMAKE_PROFILE}"
     --configfile "${NRT_PRODUCER_CONFIG}"
     --config "inproot=${ROOT}/inproot" ${NRT_CDO:+"cdo=${NRT_CDO}"}
+    ${NRT_ERA5_DIR:+"dir_era5=${NRT_ERA5_DIR}"}
+    ${NRT_ERA5_SOURCE:+"era5_source=${NRT_ERA5_SOURCE}"}
+    ${NRT_ERA5_FREQ:+"era5_freq=${NRT_ERA5_FREQ}"}
+    ${NRT_ERA5_KEEP:+"era5_keep=${NRT_ERA5_KEEP}"}
     --default-resources "slurm_account=${NRT_SLURM_ACCOUNT}" "slurm_partition=${NRT_SLURM_PARTITION}")
 if [ -n "${TMPDIR_OVERRIDE}" ]; then
     SNAKEMAKE+=("tmpdir='${TMPDIR_OVERRIDE}'")
