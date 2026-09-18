@@ -45,8 +45,7 @@ chmod 2755 "${ROOT}" "${ROOT}/inproot" "${ROOT}/inproot/storyline_forcing" "${RO
 # The site may put CDO's intermediates off the node's own $TMPDIR.
 [ -z "${NRT_TMPDIR:-}" ] || mkdir -p "${NRT_TMPDIR}" || exit 1
 
-# Without this, a missing CLI reads as a broken env and the recovery below moves
-# a working one aside.
+# A missing CLI otherwise reads as a broken env and the recovery below moves it aside.
 if ! command -v pixi >/dev/null 2>&1; then
     echo "ERROR: no pixi on PATH; NRT_PIXI_BIN is '${NRT_PIXI_BIN:-unset}'" >&2
     exit 1

@@ -35,6 +35,21 @@ Setup creates `inproot/` and `logs/`, solves the pixi environment (Snakemake, CD
 ecCodes), writes `nrt_forcing.conf` from `nrt_forcing.conf.example` and then runs
 `nrt_forcing_check.sh`. It is safe to re-run and never overwrites an existing `nrt_forcing.conf`.
 
+### The pixi CLI
+
+Setup needs a `pixi` on `PATH` and installs none. `NRT_PIXI_BIN` in the site conf says where to
+look and may be a list: Levante uses the system install in `/sw/bin`, LUMI looks in the clone
+before `~/.pixi/bin`. To put one in the clone:
+
+```bash
+curl -fsSL https://pixi.sh/install.sh | PIXI_HOME=$PWD/.pixi-home PIXI_NO_PATH_UPDATE=1 bash
+```
+
+The CLI, the environment at `<clone>/.pixi` (~45 K files) and pixi's package cache (a comparable
+set) are separate. Only the environment follows the clone; the cache goes where `PIXI_CACHE_DIR`
+points, else `~/.cache/rattler`, so a site on a machine with a file quota on `$HOME` redirects it
+into the clone. `nrt_forcing_check.sh` checks both locations.
+
 `nrt_forcing_check.sh` also stands alone. It answers "can this machine run the producer" before a
 real day depends on the answer: the pixi environment actually runs, the tools the driver shells
 out to exist, the clone is not somewhere with a file quota a pixi environment will exhaust, the
@@ -130,6 +145,7 @@ logs/<grid>/           run logs, events.jsonl, nrt_forcing.prom (untracked)
 tmp/                   CDO intermediates, when the site points NRT_TMPDIR here (untracked)
 era5-cache/            downloaded ERA5, for a cds site with no NRT_ERA5_DIR (untracked)
 .pixi-home/            the pixi CLI, where a site puts it in the clone (untracked)
+.pixi-cache/           pixi's package cache, where a site redirects it into the clone (untracked)
 ```
 
 ## Observability

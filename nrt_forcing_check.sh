@@ -50,8 +50,7 @@ bad() {
 
 echo "site ${NRT_SITE}, clone ${ROOT}"
 
-# 1. The CLI and the environment are separate failures: a deleted CLI leaves a
-# perfectly good env unreachable.
+# 1. The CLI and the environment fail separately.
 if command -v pixi >/dev/null 2>&1; then
     ok "pixi CLI $(command -v pixi)"
 else
