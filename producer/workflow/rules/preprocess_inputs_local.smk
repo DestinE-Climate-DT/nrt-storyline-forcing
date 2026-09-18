@@ -23,6 +23,10 @@ def _era5_path(tree, param, date):
 
 localrules: download_era5_from_cds
 
+# A site where the chain costs less than the queue it would wait in.
+if _flag("local_compute"):
+    localrules: create_nudging_file
+
 # ---------------------------------------------------------------------------
 # ERA5 download from CDS (only active when era5_source: cds is set)
 # ---------------------------------------------------------------------------
@@ -153,11 +157,6 @@ rule create_nudging_file:
 
         rm -fv $TMPSPECTRAL $TMPCHPARAM
         """
-
-
-# A site where the chain costs less than the queue it would wait in.
-if _flag("local_compute"):
-    localrules: create_nudging_file
 
 
 # ---------------------------------------------------------------------------
