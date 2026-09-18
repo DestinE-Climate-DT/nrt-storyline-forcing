@@ -373,7 +373,7 @@ for day in "${verified[@]}"; do
     # --partial-dir keeps a torn record out of the directory the probe lists.
     # --chmod overrides the producer's inherited mode, which can leave the
     # records unreadable to the account that runs the experiment.
-    if rsync -a --chmod=F644 --partial-dir=.rsync-partial \
+    if rsync -av --chmod=F644 --partial-dir=.rsync-partial \
         "${OUTDIR}/rlxmlsh${day}"{00,06,12,18}00 \
         "${DEST_HOST:+${DEST_HOST}:}${DEST_DIR}/"; then
         shipped+=("${day}")
