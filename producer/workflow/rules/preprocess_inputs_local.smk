@@ -2,10 +2,30 @@ import datetime
 from pathlib import Path
 import os
 
+from snakemake.exceptions import WorkflowError
+
 HOURS = ["00", "06", "12", "18"]
+
+# The pool's frequency level. Levante reads its 1H pool; a CDS cache holds only
+# HOURS, so it is named 6H and never 1H.
+FREQ = config.get("era5_freq", "1H")
+
+
+def _flag(name):
+    # --config passes strings, a configfile passes booleans.
+    return str(config.get(name, "")).strip().lower() in ("1", "true", "yes")
+
+
+def _era5_path(tree, param, date):
+    base = config["dir_era5"]
+    return f"{base}/{tree}/ml/an/{FREQ}/{param}/{tree}ml00_{FREQ}_{date}_{param}.grb"
+
 
 localrules: download_era5_from_cds
 
+# A site where the chain costs less than the queue it would wait in.
+if _flag("local_compute"):
+    localrules: create_nudging_file
 
 # ---------------------------------------------------------------------------
 # ERA5 download from CDS (only active when era5_source: cds is set)
@@ -13,13 +33,20 @@ localrules: download_era5_from_cds
 # On Levante, dir_era5 points at the local pool and files exist as source
 # files. Elsewhere, set `era5_source: cds` and `dir_era5` to a local cache
 # directory. The download rule then fetches per-day grib files from CDS
-# matching the local pool structure. They are marked temp() so Snakemake
-# deletes them once the nudging files have been produced.
+# matching the local pool structure. They are temp() unless era5_keep is set.
 
 if config.get('era5_source') == 'cds':
+    if FREQ == "1H":
+        raise WorkflowError(
+            "era5_source: cds fetches only " + "/".join(HOURS)
+            + " -- set era5_freq to 6H so the path is not named 1H"
+        )
+
+    _ERA5_OUT = _era5_path("E5", "{param}", "{YYYY}-{MM}-{DD}")
+
     rule download_era5_from_cds:
         output:
-            temp(config.get("dir_era5") + "/E5/ml/an/1H/{param}/E5ml00_1H_{YYYY}-{MM}-{DD}_{param}.grb")
+            _ERA5_OUT if _flag("era5_keep") else temp(_ERA5_OUT)
         wildcard_constraints:
             param=r"\d+",
             YYYY=r"\d{4}",
@@ -31,17 +58,21 @@ if config.get('era5_source') == 'cds':
             out = str(output[0])
             os.makedirs(os.path.dirname(out), exist_ok=True)
 
+            # Download beside the target and rename, so a shared cache never
+            # offers a half-written file to another user's Snakemake.
+            part = out + ".part"
             c = cdsapi.Client()
             c.retrieve("reanalysis-era5-complete", {
                 "date": f"{wildcards.YYYY}-{wildcards.MM}-{wildcards.DD}",
-                "time": "00/to/23",
+                "time": "/".join(f"{h}:00:00" for h in HOURS),
                 "stream": "oper",
                 "type": "an",
                 "levtype": "ml",
                 "levelist": "1/to/137",
                 "param": wildcards.param,
                 "format": "grib",
-            }, out)
+            }, part)
+            os.replace(part, out)
 
 
 # ---------------------------------------------------------------------------
@@ -55,13 +86,11 @@ if config.get('era5_source') == 'cds':
 
 def _era5_input(param):
     def _resolve(wildcards):
-        base = config["dir_era5"]
         date = f"{wildcards.YYYY}-{wildcards.MM}-{wildcards.DD}"
-        e5 = f"{base}/E5/ml/an/1H/{param}/E5ml00_1H_{date}_{param}.grb"
+        e5 = _era5_path("E5", param, date)
         if config.get("era5_source") == "cds":
             return e5
-        et = f"{base}/ET/ml/an/1H/{param}/ETml00_1H_{date}_{param}.grb"
-        return e5 if os.path.exists(e5) else et
+        return e5 if os.path.exists(e5) else _era5_path("ET", param, date)
     return _resolve
 
 

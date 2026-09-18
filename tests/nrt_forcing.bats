@@ -157,3 +157,29 @@ records() {
     [ -f "${LOGS}/events.jsonl" ]
     [ -f "${ROOT}/logs/tco1279l137/events.jsonl" ]
 }
+
+@test "ERA5 overrides ride in --config, ahead of --default-resources" {
+    cat >>"${ROOT}/nrt_forcing.conf" <<EOF
+NRT_ERA5_DIR=/cache/ERA5
+NRT_ERA5_SOURCE=cds
+NRT_ERA5_FREQ=6H
+NRT_ERA5_KEEP=true
+EOF
+    ARGV=${BATS_TEST_TMPDIR}/argv
+    MOCK_ARGV=${ARGV} run "${ROOT}/nrt_forcing.sh" --plan --dest-dir "${DEST}" 20170101 20170101
+    [ "${status}" -eq 0 ]
+    config=$(grep -nx -- --config "${ARGV}" | cut -d: -f1)
+    resources=$(grep -nx -- --default-resources "${ARGV}" | cut -d: -f1)
+    for kv in dir_era5=/cache/ERA5 era5_source=cds era5_freq=6H era5_keep=true; do
+        line=$(grep -nx -- "${kv}" "${ARGV}" | cut -d: -f1)
+        [ -n "${line}" ]
+        [ "${line}" -gt "${config}" ]
+        [ "${line}" -lt "${resources}" ]
+    done
+}
+
+@test "no ERA5 overrides set: no era5 keys at all" {
+    ARGV=${BATS_TEST_TMPDIR}/argv
+    MOCK_ARGV=${ARGV} run "${ROOT}/nrt_forcing.sh" --plan --dest-dir "${DEST}" 20170101 20170101
+    ! grep -q era5 "${ARGV}"
+}

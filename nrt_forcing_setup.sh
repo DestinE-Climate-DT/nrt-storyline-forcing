@@ -42,6 +42,14 @@ PATH=${NRT_PIXI_BIN:+${NRT_PIXI_BIN}:}${PATH}
 # A umask of 0077 would lock the rest of the project out of the forcing.
 mkdir -p "${ROOT}/inproot/storyline_forcing" "${ROOT}/logs" || exit 1
 chmod 2755 "${ROOT}" "${ROOT}/inproot" "${ROOT}/inproot/storyline_forcing" "${ROOT}/logs"
+# The site may put CDO's intermediates off the node's own $TMPDIR.
+[ -z "${NRT_TMPDIR:-}" ] || mkdir -p "${NRT_TMPDIR}" || exit 1
+
+# A missing CLI otherwise reads as a broken env and the recovery below moves it aside.
+if ! command -v pixi >/dev/null 2>&1; then
+    echo "ERROR: no pixi on PATH; NRT_PIXI_BIN is '${NRT_PIXI_BIN:-unset}'" >&2
+    exit 1
+fi
 
 env_ok() {
     pixi run --manifest-path "${ROOT}/pixi.toml" snakemake --version >/dev/null 2>&1
@@ -69,5 +77,9 @@ else
     sed -e "s|^NRT_SITE=.*|NRT_SITE=${SITE}|" -e "s|^NRT_SLURM_ACCOUNT=.*|NRT_SLURM_ACCOUNT=${ACCOUNT}|" \
         "${ROOT}/nrt_forcing.conf.example" >"${CONF}" || exit 1
     echo "wrote ${CONF}; set NRT_DEST_HOST if the destination is another machine"
+fi
+if [ -x "${ROOT}/nrt_forcing_check.sh" ]; then
+    echo "checking this machine:"
+    "${ROOT}/nrt_forcing_check.sh" || exit 1
 fi
 echo "ready: ${ROOT}"

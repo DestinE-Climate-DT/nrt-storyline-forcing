@@ -229,6 +229,11 @@ SNAKEMAKE=(snakemake
     --profile "${NRT_SNAKEMAKE_PROFILE}"
     --configfile "${NRT_PRODUCER_CONFIG}"
     --config "inproot=${ROOT}/inproot" ${NRT_CDO:+"cdo=${NRT_CDO}"}
+    ${NRT_ERA5_DIR:+"dir_era5=${NRT_ERA5_DIR}"}
+    ${NRT_ERA5_SOURCE:+"era5_source=${NRT_ERA5_SOURCE}"}
+    ${NRT_ERA5_FREQ:+"era5_freq=${NRT_ERA5_FREQ}"}
+    ${NRT_ERA5_KEEP:+"era5_keep=${NRT_ERA5_KEEP}"}
+    ${NRT_LOCAL_COMPUTE:+"local_compute=${NRT_LOCAL_COMPUTE}"}
     --default-resources "slurm_account=${NRT_SLURM_ACCOUNT}" "slurm_partition=${NRT_SLURM_PARTITION}")
 if [ -n "${TMPDIR_OVERRIDE}" ]; then
     SNAKEMAKE+=("tmpdir='${TMPDIR_OVERRIDE}'")
@@ -368,7 +373,7 @@ for day in "${verified[@]}"; do
     # --partial-dir keeps a torn record out of the directory the probe lists.
     # --chmod overrides the producer's inherited mode, which can leave the
     # records unreadable to the account that runs the experiment.
-    if rsync -a --chmod=F644 --partial-dir=.rsync-partial \
+    if rsync -av --chmod=F644 --partial-dir=.rsync-partial \
         "${OUTDIR}/rlxmlsh${day}"{00,06,12,18}00 \
         "${DEST_HOST:+${DEST_HOST}:}${DEST_DIR}/"; then
         shipped+=("${day}")

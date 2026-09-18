@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Mock snakemake: targets are what follows `--jobs N`; a real run writes the missing ones at one size.
 [ -z "${MOCK_SNAKEMAKE_RC:-}" ] || exit "${MOCK_SNAKEMAKE_RC}"
+[ -z "${MOCK_ARGV:-}" ] || printf '%s\n' "$@" >"${MOCK_ARGV}"
 while [ $# -gt 0 ] && [ "$1" != --jobs ]; do
     shift
 done

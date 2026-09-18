@@ -9,8 +9,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: sudo apt-get update && sudo apt-get install -y bats shellcheck shfmt
-      - run: shellcheck -S error nrt_forcing.sh nrt_forcing_setup.sh sites/*.conf tests/mocks/*
-      - run: shfmt -i 4 -d nrt_forcing.sh nrt_forcing_setup.sh tests/mocks
+      - run: shellcheck -S error nrt_forcing.sh nrt_forcing_setup.sh nrt_forcing_check.sh sites/*.conf tests/mocks/*
+      - run: shfmt -i 4 -d nrt_forcing.sh nrt_forcing_setup.sh nrt_forcing_check.sh tests/mocks
       - run: bats tests
 
   secrets:
