@@ -129,6 +129,7 @@ inproot/storyline_forcing/<grid>/rlxmlsh<YYYYMMDDHH>00    produced records (untr
 logs/<grid>/           run logs, events.jsonl, nrt_forcing.prom (untracked)
 tmp/                   CDO intermediates, when the site points NRT_TMPDIR here (untracked)
 era5-cache/            downloaded ERA5, for a cds site with no NRT_ERA5_DIR (untracked)
+.pixi-home/            the pixi CLI, where a site puts it in the clone (untracked)
 ```
 
 ## Observability

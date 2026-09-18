@@ -233,6 +233,7 @@ SNAKEMAKE=(snakemake
     ${NRT_ERA5_SOURCE:+"era5_source=${NRT_ERA5_SOURCE}"}
     ${NRT_ERA5_FREQ:+"era5_freq=${NRT_ERA5_FREQ}"}
     ${NRT_ERA5_KEEP:+"era5_keep=${NRT_ERA5_KEEP}"}
+    ${NRT_LOCAL_COMPUTE:+"local_compute=${NRT_LOCAL_COMPUTE}"}
     --default-resources "slurm_account=${NRT_SLURM_ACCOUNT}" "slurm_partition=${NRT_SLURM_PARTITION}")
 if [ -n "${TMPDIR_OVERRIDE}" ]; then
     SNAKEMAKE+=("tmpdir='${TMPDIR_OVERRIDE}'")

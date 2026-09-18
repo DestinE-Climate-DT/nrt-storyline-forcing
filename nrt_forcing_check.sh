@@ -50,7 +50,13 @@ bad() {
 
 echo "site ${NRT_SITE}, clone ${ROOT}"
 
-# 1. The environment, tested by running it rather than by looking for .pixi.
+# 1. The CLI and the environment are separate failures: a deleted CLI leaves a
+# perfectly good env unreachable.
+if command -v pixi >/dev/null 2>&1; then
+    ok "pixi CLI $(command -v pixi)"
+else
+    bad "no pixi on PATH; check NRT_PIXI_BIN in sites/${NRT_SITE}.conf"
+fi
 if pixi run --manifest-path "${ROOT}/pixi.toml" snakemake --version >/dev/null 2>&1; then
     ok "pixi env runs snakemake"
 else
@@ -72,10 +78,16 @@ else
     bad "GNU stat -c / date -d needed; this is not a GNU userland"
 fi
 
-# 3. An inode quota is what a pixi env in the wrong filesystem runs into.
+# 3. An inode quota is what a pixi env in the wrong filesystem runs into. The
+# package cache is a second copy of it and follows $HOME, not the clone.
 case ${ROOT} in
 "${HOME}"/*) warn "clone is under \$HOME; a pixi env is ~45k inodes, so check the home file quota" ;;
 *) ok "clone is outside \$HOME" ;;
+esac
+PIXI_CACHE=${PIXI_CACHE_DIR:-${RATTLER_CACHE_DIR:-${XDG_CACHE_HOME:-${HOME}/.cache}/rattler}}
+case ${PIXI_CACHE} in
+"${HOME}"/*) warn "package cache ${PIXI_CACHE} is under \$HOME and is a further ~49k inodes; set PIXI_CACHE_DIR" ;;
+*) ok "package cache is outside \$HOME" ;;
 esac
 
 # 4. A POSIX group is not a scheduler association.
