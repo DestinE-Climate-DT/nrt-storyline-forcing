@@ -3,6 +3,15 @@
 Versions follow [Semantic Versioning](https://semver.org/). While the major version is `0`,
 the command-line interface and the exit codes may change between releases.
 
+## Unreleased
+
+### Changed
+
+- The CDS route fetches 138 and 155 in one request per day instead of one per parameter, and the
+  driver passes `--resources cds=1` so no two requests are in flight at once: since 2026-10-22 CDS
+  suspends accounts that submit in parallel. The day is split with `grib_copy` into the same
+  per-parameter cache files as before, each checked for 548 fields (137 levels at four hours).
+
 ## v0.1.0-alpha.1 - 2026-09-17
 
 First tagged release: the near-real-time storyline forcing pipeline as a repository that can be

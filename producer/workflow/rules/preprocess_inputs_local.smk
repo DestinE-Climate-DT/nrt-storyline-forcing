@@ -32,8 +32,9 @@ if _flag("local_compute"):
 # ---------------------------------------------------------------------------
 # On Levante, dir_era5 points at the local pool and files exist as source
 # files. Elsewhere, set `era5_source: cds` and `dir_era5` to a local cache
-# directory. The download rule then fetches per-day grib files from CDS
-# matching the local pool structure. They are temp() unless era5_keep is set.
+# directory. The download rule then fetches each day from CDS and splits it
+# into per-param grib files matching the local pool structure. They are
+# temp() unless era5_keep is set.
 
 if config.get('era5_source') == 'cds':
     if FREQ == "1H":
@@ -42,37 +43,64 @@ if config.get('era5_source') == 'cds':
             + " -- set era5_freq to 6H so the path is not named 1H"
         )
 
-    _ERA5_OUT = _era5_path("E5", "{param}", "{YYYY}-{MM}-{DD}")
+    _ERA5_PARAMS = ("138", "155")
+    # Each param's share of a day: 137 levels at each of HOURS.
+    _ERA5_FIELDS = 137 * len(HOURS)
 
+    def _era5_cache(param):
+        out = _era5_path("E5", param, "{YYYY}-{MM}-{DD}")
+        return out if _flag("era5_keep") else temp(out)
+
+    # One request per day for both params, so MARS reads the day once; the
+    # driver's --resources cds=1 keeps these jobs to one at a time.
     rule download_era5_from_cds:
         output:
-            _ERA5_OUT if _flag("era5_keep") else temp(_ERA5_OUT)
+            [_era5_cache(p) for p in _ERA5_PARAMS]
         wildcard_constraints:
-            param=r"\d+",
             YYYY=r"\d{4}",
             MM=r"\d{2}",
             DD=r"\d{2}",
+        resources:
+            cds = 1,
         run:
+            import subprocess
             import cdsapi
 
-            out = str(output[0])
-            os.makedirs(os.path.dirname(out), exist_ok=True)
+            date = f"{wildcards.YYYY}-{wildcards.MM}-{wildcards.DD}"
+            for out in output:
+                os.makedirs(os.path.dirname(out), exist_ok=True)
 
-            # Download beside the target and rename, so a shared cache never
+            # Split beside each target and rename, so a shared cache never
             # offers a half-written file to another user's Snakemake.
-            part = out + ".part"
-            c = cdsapi.Client()
-            c.retrieve("reanalysis-era5-complete", {
-                "date": f"{wildcards.YYYY}-{wildcards.MM}-{wildcards.DD}",
-                "time": "/".join(f"{h}:00:00" for h in HOURS),
-                "stream": "oper",
-                "type": "an",
-                "levtype": "ml",
-                "levelist": "1/to/137",
-                "param": wildcards.param,
-                "format": "grib",
-            }, part)
-            os.replace(part, out)
+            both = output[0] + ".cds.part"
+            parts = [out + ".part" for out in output]
+            try:
+                cdsapi.Client().retrieve("reanalysis-era5-complete", {
+                    "date": date,
+                    "time": "/".join(f"{h}:00:00" for h in HOURS),
+                    "stream": "oper",
+                    "type": "an",
+                    "levtype": "ml",
+                    "levelist": "1/to/137",
+                    "param": "/".join(_ERA5_PARAMS),
+                    "format": "grib",
+                }, both)
+                for param, part, out in zip(_ERA5_PARAMS, parts, output):
+                    # grib_copy writes no file, and exits 0, when nothing matches.
+                    subprocess.run(["grib_copy", "-w", f"paramId={param}", both, part], check=True)
+                    if not os.path.exists(part) or os.path.getsize(part) == 0:
+                        raise WorkflowError(f"CDS returned no param {param} for {date}")
+                    n = int(subprocess.run(["grib_count", part], check=True,
+                                           capture_output=True, text=True).stdout)
+                    if n != _ERA5_FIELDS:
+                        raise WorkflowError(
+                            f"CDS returned {n} fields of param {param} for {date}, not {_ERA5_FIELDS}"
+                        )
+                    os.replace(part, out)
+            finally:
+                for f in [both, *parts]:
+                    if os.path.exists(f):
+                        os.remove(f)
 
 
 # ---------------------------------------------------------------------------

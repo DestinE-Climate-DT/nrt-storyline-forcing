@@ -178,6 +178,14 @@ EOF
     done
 }
 
+@test "NRT_TMPDIR stays a default resource, and cds=1 sits between it and --jobs" {
+    ARGV=${BATS_TEST_TMPDIR}/argv
+    NRT_TMPDIR=/scratch/tmp MOCK_ARGV=${ARGV} run "${ROOT}/nrt_forcing.sh" --plan --dest-dir "${DEST}" 20170101 20170101
+    [ "${status}" -eq 0 ]
+    res=$(grep -nx -- --resources "${ARGV}" | cut -d: -f1)
+    [ "$(sed -n "$((res - 1)),$((res + 2))p" "${ARGV}" | tr '\n' ' ')" = "tmpdir='/scratch/tmp' --resources cds=1 --jobs " ]
+}
+
 @test "no ERA5 overrides set: no era5 keys at all" {
     ARGV=${BATS_TEST_TMPDIR}/argv
     MOCK_ARGV=${ARGV} run "${ROOT}/nrt_forcing.sh" --plan --dest-dir "${DEST}" 20170101 20170101

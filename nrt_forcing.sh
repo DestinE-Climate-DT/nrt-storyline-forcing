@@ -238,8 +238,9 @@ SNAKEMAKE=(snakemake
 if [ -n "${TMPDIR_OVERRIDE}" ]; then
     SNAKEMAKE+=("tmpdir='${TMPDIR_OVERRIDE}'")
 fi
-# --jobs closes the --default-resources list; left open it swallows the targets, and --plan cannot show it.
-SNAKEMAKE+=(--jobs "${JOBS}")
+# --resources closes the --default-resources list and --jobs closes --resources; left open, a list
+# swallows the targets, and --plan cannot show it. cds=1: CDS suspends accounts that submit in parallel.
+SNAKEMAKE+=(--resources cds=1 --jobs "${JOBS}")
 
 log_event start \
     root "\"${ROOT}\"" outdir "\"${OUTDIR}\"" dest_host "\"${DEST_HOST}\"" dest_dir "\"${DEST_DIR}\"" \
