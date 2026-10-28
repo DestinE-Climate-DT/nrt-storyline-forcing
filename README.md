@@ -118,7 +118,9 @@ and the licence accepted **on the `reanalysis-era5-complete` dataset page**, whi
 acceptance from the general CDS terms. Without it every request returns `403 required licences not
 accepted`, which is indistinguishable by status code from a bad token.
 
-Only the four nudging hours are fetched, so a day costs ~902 MB rather than ~5.41 GB. Because
+Only the four nudging hours are fetched, so a day costs ~902 MB rather than ~5.41 GB. Both
+parameters come in one request per day, split locally into one file each, and requests go to CDS
+one at a time, since CDS suspends accounts that submit in parallel. Because
 those files are not the hourly pool product, they are written at the **`6H`** level of the same
 layout (`<dir_era5>/E5/ml/an/6H/<param>/E5ml00_6H_<date>_<param>.grb`) and a `cds` source
 configured with `era5_freq: 1H` is refused rather than allowed to mislabel them.
