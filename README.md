@@ -133,7 +133,9 @@ configured with `era5_freq: 1H` is refused rather than allowed to mislabel them.
 | `sites/<name>.conf` | per machine: pixi location, SLURM partition, Snakemake profile, producer config, tmpdir |
 | `producer/config/config-<site>.yaml` | where ERA5 is on that machine: `dir_era5`, `era5_source`, `era5_freq`, `era5_keep` |
 
-Optional environment overrides: `NRT_SNAKEMAKE_JOBS` (default 10), `NRT_CDO` (a CDO binary other
+Optional environment overrides: `NRT_SNAKEMAKE_JOBS` (default 10), `NRT_STALE_LOCK_MINUTES`
+(default 360: how long a Snakemake lock taken on another login node counts as a live run),
+`NRT_CDO` (a CDO binary other
 than the environment's), and `NRT_ERA5_DIR` / `NRT_ERA5_SOURCE` / `NRT_ERA5_FREQ` /
 `NRT_ERA5_KEEP`, which override the site's producer config without editing a tracked file.
 
@@ -156,7 +158,7 @@ Each grid gets its own log directory:
 
 - `<first>_<last>_<runid>.log`: the whole run, for a human. An idle `--plan` leaves none.
 - `events.jsonl`: one flat JSON object per event (`start`, `nothing_to_do`, `unshipped`,
-  `dest_unreachable`, `already_running`,
+  `dest_unreachable`, `already_running`, `stale_lock`,
   `plan_refused`, `produced`, `produce_failed`, `verified`, `verify_failed`, `shipped`,
   `ship_failed`, `landed`, `land_failed`, `end`), each carrying `run_id`, `expid`, `grid`, days,
   user and host.

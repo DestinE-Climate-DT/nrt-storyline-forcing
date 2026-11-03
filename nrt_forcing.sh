@@ -115,6 +115,7 @@ if [ -z "${DEST_HOST}" ] && [ "${DEST_DIR#/}" != "${DEST_DIR}" ]; then
 fi
 
 JOBS=${NRT_SNAKEMAKE_JOBS:-10}
+STALE_LOCK_MINUTES=${NRT_STALE_LOCK_MINUTES:-360}
 TMPDIR_OVERRIDE=${NRT_TMPDIR:-}
 OUTDIR=${ROOT}/inproot/storyline_forcing/${GRID}
 LOG_DIR=${ROOT}/logs/${GRID}
@@ -282,9 +283,19 @@ for d in $*; do day_complete '${DEST_DIR}' \$d && echo \$d; done
 exit 0"
 }
 
+# A run killed by a signal leaves its locks behind. A live run is a Snakemake for this clone on the
+# host that took them; a lock from another host, whose processes are not visible here, gets until it ages.
 if [ -n "$(ls -A .snakemake/locks 2>/dev/null)" ]; then
-    log_event already_running
-    exit 10
+    lock_host=$(cat .snakemake/nrt_lock_host 2>/dev/null)
+    lock_age=$((($(date +%s) - $(stat -c %Y .snakemake/locks)) / 60))
+    if pgrep -u "${RUN_USER}" -f -- "inproot=${ROOT}/inproot" >/dev/null ||
+        { [ "${lock_host}" != "${RUN_HOST}" ] && [ "${lock_age}" -lt "${STALE_LOCK_MINUTES}" ]; }; then
+        log_event already_running
+        exit 10
+    fi
+    log_event stale_lock lock_host "\"${lock_host}\"" age_minutes "${lock_age}"
+    echo "clearing a stale Snakemake lock (host ${lock_host:-unknown}, ${lock_age} min old)"
+    rm -f .snakemake/locks/*
 fi
 
 if ! plan=$("${SNAKEMAKE[@]}" --dry-run "${TARGETS[@]}" 2>&1); then
@@ -316,6 +327,7 @@ case ${plan} in
 *)
     printf '%s\n' "${plan}" | tail -15
     [ "${PLAN_ONLY}" = 1 ] && exit 0
+    mkdir -p .snakemake && echo "${RUN_HOST}" >.snakemake/nrt_lock_host
     if ! "${SNAKEMAKE[@]}" "${TARGETS[@]}"; then
         log_event produce_failed
         echo "ERROR: Snakemake failed for ${FIRST_DAY}..${LAST_DAY}" >&2
