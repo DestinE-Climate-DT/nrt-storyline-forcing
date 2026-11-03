@@ -114,6 +114,43 @@ records() {
     [ "${status}" -eq 4 ]
 }
 
+lock() {
+    mkdir -p "${ROOT}/producer/.snakemake/locks"
+    touch "${ROOT}/producer/.snakemake/locks/0.output.lock"
+    echo "$1" >"${ROOT}/producer/.snakemake/nrt_lock_host"
+}
+
+@test "lock left by a dead run on this host: cleared, and the run goes on" {
+    lock "$(hostname -s)"
+    run "${ROOT}/nrt_forcing.sh" --dest-dir "${DEST}" 20170101 20170101
+    [ "${status}" -eq 0 ]
+    [ -z "$(ls -A "${ROOT}/producer/.snakemake/locks")" ]
+    grep -q '"event":"stale_lock"' "${LOGS}/events.jsonl"
+}
+
+@test "lock held by a live Snakemake for this clone: 10" {
+    lock "$(hostname -s)"
+    bash -c 'sleep 30; :' "inproot=${ROOT}/inproot" &
+    run "${ROOT}/nrt_forcing.sh" --plan --dest-dir "${DEST}" 20170101 20170101
+    kill $!
+    [ "${status}" -eq 10 ]
+    grep -q '"event":"already_running"' "${LOGS}/events.jsonl"
+}
+
+@test "young lock from another host: 10, and left in place" {
+    lock elsewhere
+    run "${ROOT}/nrt_forcing.sh" --plan --dest-dir "${DEST}" 20170101 20170101
+    [ "${status}" -eq 10 ]
+    [ -n "$(ls -A "${ROOT}/producer/.snakemake/locks")" ]
+}
+
+@test "lock from another host older than NRT_STALE_LOCK_MINUTES: cleared" {
+    lock elsewhere
+    NRT_STALE_LOCK_MINUTES=0 run "${ROOT}/nrt_forcing.sh" --plan --dest-dir "${DEST}" 20170101 20170101
+    [ "${status}" -eq 0 ]
+    [ -z "$(ls -A "${ROOT}/producer/.snakemake/locks")" ]
+}
+
 @test "06 record holding 00 UTC: 5" {
     records 20170101
     MOCK_BAD_DATATIME=rlxmlsh201701010600 run "${ROOT}/nrt_forcing.sh" --dest-dir "${DEST}" 20170101 20170101

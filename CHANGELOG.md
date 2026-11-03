@@ -5,6 +5,13 @@ the command-line interface and the exit codes may change between releases.
 
 ## Unreleased
 
+### Fixed
+
+- A run killed by a signal (a login session stopped under it) no longer blocks every later run as
+  `already_running` (exit 10): its locks are cleared, with a `stale_lock` event, when no Snakemake
+  for the clone runs on the host that took them, or, for a lock from another login node, once it
+  is older than `NRT_STALE_LOCK_MINUTES` (default 360).
+
 ### Changed
 
 - The CDS route fetches 138 and 155 in one request per day instead of one per parameter, and the
